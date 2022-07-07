@@ -2,13 +2,15 @@
 [![Paper](http://img.shields.io/badge/arxiv-cs.CV:2203.14395-B31B1B.svg)](https://arxiv.org/abs/2203.14395)
 
 # SIMLA: Single-Stream Multi-Level Alignment for Vision-Language Pretraining, ECCV 2022 (NEC Labs)
+This is the official PyTorch implementation of [SIMLA](https://arxiv.org/abs/2203.14395).
+The repository is heavily based on [salesforce/ALBEF](https://github.com/salesforce/ALBEF), and supports vision-language pretraining and downstream task finetuning for several tasks.
 
 ## Pretraining
 ```bash
 python -m torch.distributed.launch --nproc_per_node=2 --use_env Pretrain.py --config configs/Pretrain.yaml --output_dir <where to save> 
 ```
 
-## Retrieval
+## Image Text Retrieval
 ### Finetuned (COCO)
 ```bash
 python -m torch.distributed.launch --master_port=49770 --nproc_per_node=2 --use_env Retrieval.py \
@@ -30,7 +32,7 @@ python -m torch.distributed.launch --master_port=49770 --nproc_per_node=2 --use_
 --checkpoint <path/to/checkpoint.pth>
 ```
 
-# Grounding
+## RefCOCO+ (Visual Grounding) 
 ```bash
 python -m torch.distributed.launch --master_port=49121 --nproc_per_node=2 --use_env Grounding.py \
 --config ./configs/Grounding.yaml \
@@ -40,29 +42,29 @@ python -m torch.distributed.launch --master_port=49121 --nproc_per_node=2 --use_
 --checkpoint <path/to/checkpoint.pth> \
 ```
 
-# VQA
+## VQA (Visual Question Answering)
 ```bash
 python -m torch.distributed.launch --nproc_per_node=2 --use_env VQA.py \
 --config ./configs/VQA.yaml \
 --output_dir <path/to/output> \
 --checkpoint <path/to/checkpoint.pth> 
 ```
-# NLVR
-## Pretraining
+## NLVR (Natural Language Visual Reasoning)
+### Pretraining
 ```bash
 python -m torch.distributed.launch --nproc_per_node=2 --use_env Pretrain_NLVR.py \
 --config ./configs/NLVR_Pretrain.yaml \
 --output_dir <path/to/output> \
 --checkpoint <path/to/checkpoint.pth> 
 ```
-## Finetuning
+### Finetuning
 ```bash
 python -m torch.distributed.launch --nproc_per_node=2 --use_env NLVR.py \
 --config ./configs/NLVR.yaml \
 --output_dir <path/to/output> \
 --checkpoint <path/to/checkpoint.pth>
 ```
-# SNLI-VE
+## SNLI-VE (Visual Entailment)
 ```bash
 python -m torch.distributed.launch --master_port=47770 --nproc_per_node=2 \
 --use_env VE.py \
