@@ -5,6 +5,9 @@
 This is the official PyTorch implementation of [SIMLA](https://arxiv.org/abs/2203.14395).
 The repository is heavily based on [salesforce/ALBEF](https://github.com/salesforce/ALBEF), and supports vision-language pretraining and downstream task finetuning for several tasks.
 
+<img src="teaser.PNG" width="600">
+
+
 ## Pretraining
 ```bash
 python -m torch.distributed.launch --nproc_per_node=2 --use_env Pretrain.py --config configs/Pretrain.yaml --output_dir <where to save> 
