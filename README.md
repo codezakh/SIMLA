@@ -1,3 +1,5 @@
+[![Conference](http://img.shields.io/badge/ECCV-2022-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018)
+
 # SIMLA
 ## Pretraining
 ```bash
