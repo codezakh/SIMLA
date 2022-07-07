@@ -13,7 +13,7 @@ bert_config: 'configs/config_bert.json'
 image_res: 256
 vision_width: 768
 embed_dim: 256
-batch_size: 32
+batch_size: 64
 
 optimizer: {opt: adamW, lr: 2e-5, weight_decay: 0.02}
 schedular: {sched: cosine, lr: 2e-5, epochs: 1, min_lr: 1e-5, decay_rate: 1, warmup_lr: 1e-5, warmup_epochs: 1, cooldown_epochs: 0}
