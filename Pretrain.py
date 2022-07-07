@@ -18,7 +18,7 @@ import wandb
 from omegaconf import OmegaConf
 import hydra
 
-from models.SIMLA import SIMLA
+from models.simla.pretrain import SIMLA
 from models.vit import interpolate_pos_embed
 from models.tokenization_bert import BertTokenizer
 from models.discrete_vae import Dalle_VAE
