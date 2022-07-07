@@ -1,4 +1,5 @@
 [![Conference](http://img.shields.io/badge/ECCV-2022-4b44ce.svg)](https://papers.nips.cc/book/advances-in-neural-information-processing-systems-31-2018)
+[![Paper](http://img.shields.io/badge/arxiv-cs.CV:2203.14395-B31B1B.svg)](https://arxiv.org/abs/2203.14395)
 
 # SIMLA
 ## Pretraining
@@ -46,4 +47,25 @@ python -m torch.distributed.launch --nproc_per_node=2 --use_env VQA.py \
 --checkpoint <path/to/checkpoint.pth> 
 ```
 # NLVR
+## Pretraining
+```bash
+python -m torch.distributed.launch --nproc_per_node=2 --use_env Pretrain_NLVR.py \
+--config ./configs/NLVR_Pretrain.yaml \
+--output_dir <path/to/output> \
+--checkpoint <path/to/checkpoint.pth> 
+```
+## Finetuning
+```bash
+python -m torch.distributed.launch --nproc_per_node=2 --use_env NLVR.py \
+--config ./configs/NLVR.yaml \
+--output_dir <path/to/output> \
+--checkpoint <path/to/checkpoint.pth>
+```
 # SNLI-VE
+```bash
+python -m torch.distributed.launch --master_port=47770 --nproc_per_node=2 \
+--use_env VE.py \
+--config ./configs/VE.yaml \
+--output_dir <path/to/output> \
+--checkpoint <path/to/checkpoint.pth>
+```
