@@ -9,7 +9,7 @@ python -m torch.distributed.launch --nproc_per_node=2 --use_env Pretrain.py --co
 ```bash
 python -m torch.distributed.launch --master_port=49770 --nproc_per_node=2 --use_env Retrieval.py \
 --config ./configs/Retrieval_coco.yaml \
---output_dir <path/to/output.pth> \
+--output_dir <path/to/output> \
 --checkpoint <path/to/checkpoint.pth>
 ```
 
@@ -22,11 +22,20 @@ python -m torch.distributed.launch --master_port=47770 --nproc_per_node=2 --use_
 ```bash
 python -m torch.distributed.launch --master_port=49770 --nproc_per_node=2 --use_env Retrieval.py \
 --config ./configs/Retrieval_flickr.yaml \
---output_dir <path/to/output.pth> \
+--output_dir <path/to/output> \
 --checkpoint <path/to/checkpoint.pth>
 ```
 
 # Grounding
+```bash
+python -m torch.distributed.launch --master_port=49121 --nproc_per_node=2 --use_env Grounding.py \
+--config ./configs/Grounding.yaml \
+--output_dir <path/to/output> \
+--gradcam_mode itm \
+--block_num 8 \
+--checkpoint <path/to/checkpoint.pth> \
+```
+
 # VQA
 # NLVR
 # SNLI-VE
