@@ -37,5 +37,11 @@ python -m torch.distributed.launch --master_port=49121 --nproc_per_node=2 --use_
 ```
 
 # VQA
+```bash
+python -m torch.distributed.launch --nproc_per_node=2 --use_env VQA.py \
+--config ./configs/VQA.yaml \
+--output_dir <path/to/output> \
+--checkpoint <path/to/checkpoint.pth> 
+```
 # NLVR
 # SNLI-VE
