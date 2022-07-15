@@ -75,3 +75,13 @@ python -m torch.distributed.launch --master_port=47770 --nproc_per_node=2 \
 --output_dir <path/to/output> \
 --checkpoint <path/to/checkpoint.pth>
 ```
+
+## Citation
+```
+@inproceedings{SIMLA,
+      title={Single-Stream Multi-Level Alignment for Vision-Language Pretraining, 
+      author={Zaid Khan and Vijay Kumar BG and Xiang Yu and Samuel Schulter and Manmohan Chandraker and Yun Fu},
+      year={2022},
+      booktitle={ECCV}
+}
+```
