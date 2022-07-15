@@ -1,4 +1,6 @@
 theme: jekyll-theme-cayman
 arxiv_url: https://arxiv.org/abs/2203.14395
+title: SIMLA
+description: Single-Stream Multi-Level Alignment for Vision Language Pretraining (ECCV 2022)
 github:
   repository_url: https://github.com/codezakh/SIMLA
