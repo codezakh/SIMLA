@@ -7,6 +7,10 @@ The repository is heavily based on [salesforce/ALBEF](https://github.com/salesfo
 
 <img src="teaser.PNG" width="800">
 
+## Checkpoints
+- [pretrained on 4m images](https://drive.google.com/file/d/1fALNNEJM6bNkVhY4vDlT8JnSWhkQ1Sop/view?usp=sharing)
+- [finetuned on COCO](https://drive.google.com/file/d/16S99bJ-tCAYX0IcN6FM-W-yzD59F2UdV/view?usp=sharing)
+
 
 ## Pretraining
 ```bash
