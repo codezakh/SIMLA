@@ -27,7 +27,120 @@ from optim import create_optimizer
 
 
 @torch.no_grad()
+def search_with_simla(
+    model,
+    data_loader,
+    tokenizer,
+    device,
+    config):
+
+    model.eval()
+
+    metric_logger = utils.MetricLogger(delimiter="  ")
+    header = "Evaluation:"
+
+    print("Computing features for evaluation...")
+    start_time = time.time()
+
+    data_loader.dataset.text = ["A child sitting at a restaurant table holding a paper mask against his face."]
+    texts = data_loader.dataset.text
+    num_text = len(texts)
+    text_bs = 1 #256
+    text_feats = []
+    text_embeds = []
+    text_atts = []
+    text_inputs = []
+    for i in tqdm(range(0, num_text, text_bs)):
+        text = texts[i : min(num_text, i + text_bs)]
+        text_input = tokenizer(
+            text,
+            padding="max_length",
+            truncation=True,
+            max_length=30,
+            return_tensors="pt",
+        ).to(device)
+        text_inputs.append(text_input)
+        text_output = model.text_encoder(
+            text_input.input_ids, attention_mask=text_input.attention_mask, mode="text"
+        )
+        text_feat = text_output.last_hidden_state
+        text_embed = F.normalize(model.text_proj(text_feat[:, 0, :]))
+        text_embeds.append(text_embed)
+        text_feats.append(text_feat)
+        text_atts.append(text_input.attention_mask)
+    text_embeds = torch.cat(text_embeds, dim=0)
+    text_feats = torch.cat(text_feats, dim=0)
+    text_atts = torch.cat(text_atts, dim=0)
+    text_tokens = torch.cat([_.input_ids for _ in text_inputs], dim=0)
+
+    image_feats = []
+    image_embeds = []
+    for image, img_id in tqdm(data_loader):
+        image = image.to(device)
+        image_feat = model.visual_encoder(image)
+        image_embed = model.vision_proj(image_feat[:, 0, :])
+        image_embed = F.normalize(image_embed, dim=-1)
+
+        image_feats.append(image_feat)
+        image_embeds.append(image_embed)
+
+    image_feats = torch.cat(image_feats, dim=0)
+    image_embeds = torch.cat(image_embeds, dim=0)
+
+    sims_matrix = image_embeds @ text_embeds.t()
+    # sims_matrix = torch.Tensor(np.load('/net/acadia10a/data/zkhan/albef-sims/albef-epoch30-sims.npy')).to(device)
+
+    num_tasks = utils.get_world_size()
+    rank = utils.get_rank()
+    step = sims_matrix.size(0) // num_tasks + 1
+    start = rank * step
+    end = min(sims_matrix.size(0), start + step)
+    sims_matrix = sims_matrix.t()
+    score_matrix_t2i = torch.full(
+        (len(texts), len(data_loader.dataset.image)), -100.0
+    ).to(device)
+
+    step = sims_matrix.size(0) // num_tasks + 1
+    start = rank * step
+    end = min(sims_matrix.size(0), start + step)
+
+    for i, sims in enumerate(
+        metric_logger.log_every(sims_matrix[start:end], 50, header)
+    ):
+
+        topk_sim, topk_idx = sims.topk(k=config["k_test"], dim=0)
+        encoder_output = image_feats[topk_idx]
+        encoder_att = torch.ones(encoder_output.size()[:-1], dtype=torch.long).to(
+            device
+        )
+        output = model.text_encoder(
+            text_tokens[start + i].repeat(config["k_test"], 1),
+            attention_mask=text_atts[start + i].repeat(config["k_test"], 1),
+            encoder_hidden_states=encoder_output,
+            encoder_attention_mask=encoder_att,
+            return_dict=True,
+            mode="multimodal",
+        )
+        score = model.itm_head(output.last_hidden_state[:, 0, :])[:, 1]
+        score_matrix_t2i[start + i, topk_idx] = score
+
+    if args.distributed:
+        dist.barrier()
+        torch.distributed.all_reduce(
+            score_matrix_t2i, op=torch.distributed.ReduceOp.SUM
+        )
+
+    total_time = time.time() - start_time
+    total_time_str = str(datetime.timedelta(seconds=int(total_time)))
+    print("Evaluation time {}".format(total_time_str))
+
+    import ipdb; ipdb.set_trace()
+
+    return score_matrix_t2i.cpu().numpy()
+
+@torch.no_grad()
 def evaluation(model, data_loader, tokenizer, device, config):
+    raise ValueError("Do not call this function.")
     # test
     model.eval()
 
@@ -312,6 +425,9 @@ def main(args, config):
     start_time = time.time()
     for epoch in range(0, max_epoch):
 
+        _, _ = search_with_simla(
+            model_without_ddp, test_loader, tokenizer, device, config
+        )
         score_test_i2t, score_test_t2i = evaluation(
             model_without_ddp, test_loader, tokenizer, device, config
         )
