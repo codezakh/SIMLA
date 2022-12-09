@@ -22,10 +22,21 @@ from models.vit import interpolate_pos_embed
 from models.tokenization_bert import BertTokenizer
 
 import utils
-from dataset import create_dataset, create_sampler, create_loader
+from dataset import create_dataset 
 from scheduler import create_scheduler
 from optim import create_optimizer
 
+def create_loader(dataset, batch_size, num_workers, collate_fn):
+    loader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        pin_memory=True,
+        shuffle=False,
+        collate_fn=collate_fn,
+        drop_last=False,
+    )
+    return loader
 
 @torch.no_grad()
 def search_with_simla(
@@ -138,16 +149,11 @@ def search_with_simla(
         score = model.itm_head(output.last_hidden_state[:, 0, :])[:, 1]
         score_matrix_t2i[start + i, topk_idx] = score
 
-    # if args.distributed:
-    #     dist.barrier()
-    #     torch.distributed.all_reduce(
-    #         score_matrix_t2i, op=torch.distributed.ReduceOp.SUM
-    #     )
-
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print("Evaluation time {}".format(total_time_str))
 
+    import ipdb; ipdb.set_trace()
     return score_matrix_t2i.cpu().numpy()
 
 def main(args, config):
@@ -155,35 +161,13 @@ def main(args, config):
 
     device = torch.device(args.device)
 
-    # fix the seed for reproducibility
-    seed = args.seed + utils.get_rank()
-    torch.manual_seed(seed)
-    np.random.seed(seed)
-    random.seed(seed)
     cudnn.benchmark = True
 
     #### Dataset ####
     print("Creating retrieval dataset")
     train_dataset, val_dataset, test_dataset = create_dataset("re", config)
 
-    if args.distributed:
-        num_tasks = utils.get_world_size()
-        global_rank = utils.get_rank()
-        samplers = create_sampler([train_dataset], [True], num_tasks, global_rank) + [
-            None,
-            None,
-        ]
-    else:
-        samplers = [None, None, None]
-
-    train_loader, val_loader, test_loader = create_loader(
-        [train_dataset, val_dataset, test_dataset],
-        samplers,
-        batch_size=[config["batch_size_train"]] + [config["batch_size_test"]] * 2,
-        num_workers=[4, 4, 4],
-        is_trains=[True, False, False],
-        collate_fns=[None, None, None],
-    )
+    test_loader = create_loader(test_dataset, config['batch_size_test'], 4, None)
 
     tokenizer = BertTokenizer.from_pretrained(args.text_encoder)
 
@@ -229,7 +213,7 @@ def main(args, config):
     #     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
     #     model_without_ddp = model.module
 
-    _ = search_with_simla(
+    score_matrix_t2i = search_with_simla(
         model_without_ddp, test_loader, tokenizer, device, config
     )
 
@@ -240,26 +224,12 @@ def main(args, config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="./configs/Retrieval_flickr.yaml")
-    parser.add_argument("--output_dir", default="output/Retrieval_flickr")
+    parser.add_argument("--config", default="./configs/Search.yaml")
     parser.add_argument("--checkpoint", default="")
     parser.add_argument("--text_encoder", default="bert-base-uncased")
-    parser.add_argument("--evaluate", action="store_true")
     parser.add_argument("--device", default="cuda")
-    parser.add_argument("--seed", default=42, type=int)
-    parser.add_argument(
-        "--world_size", default=1, type=int, help="number of distributed processes"
-    )
-    parser.add_argument(
-        "--dist_url", default="env://", help="url used to set up distributed training"
-    )
-    parser.add_argument("--distributed", default=True, type=bool)
     args = parser.parse_args()
 
     config = yaml.load(open(args.config, "r"), Loader=yaml.Loader)
-
-    Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-
-    yaml.dump(config, open(os.path.join(args.output_dir, "config.yaml"), "w"))
 
     main(args, config)
