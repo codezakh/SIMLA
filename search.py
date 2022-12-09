@@ -26,6 +26,10 @@ from dataset import create_dataset
 from scheduler import create_scheduler
 from optim import create_optimizer
 
+from torch.utils.data import Dataset
+from PIL import Image
+from torchvision import transforms
+
 def create_loader(dataset, batch_size, num_workers, collate_fn):
     loader = DataLoader(
         dataset,
@@ -38,13 +42,31 @@ def create_loader(dataset, batch_size, num_workers, collate_fn):
     )
     return loader
 
+class ImageFolderDataset(Dataset):
+    def __init__(self, folder_path, transform=None):
+        self.folder_path = Path(folder_path)
+        self.transform = transform
+        self.extensions = ['.jpg', '.jpeg', '.png', '.ppm', '.bmp', '.pgm', '.tif']
+        self.images = [x for x in self.folder_path.iterdir() if x.suffix.lower() in self.extensions]
+
+    def __getitem__(self, index):
+        image_path = os.path.join(self.folder_path, self.images[index])
+        image = Image.open(image_path).convert("RGB")
+        if self.transform is not None:
+            image = self.transform(image)
+        return image
+
+    def __len__(self):
+        return len(self.images)
+
 @torch.no_grad()
 def search_with_simla(
     model,
     data_loader,
     tokenizer,
     device,
-    config):
+    config,
+    search_query):
 
     model.eval()
 
@@ -54,8 +76,8 @@ def search_with_simla(
     print("Computing features for evaluation...")
     start_time = time.time()
 
-    data_loader.dataset.text = ["A child sitting at a restaurant table holding a paper mask against his face."]
-    texts = data_loader.dataset.text
+    data_loader.dataset.text = [""]
+    texts = [search_query] 
     num_text = len(texts)
     text_bs = 1 #256
     text_feats = []
@@ -122,7 +144,7 @@ def search_with_simla(
     end = min(sims_matrix.size(0), start + step)
     sims_matrix = sims_matrix.t()
     score_matrix_t2i = torch.full(
-        (len(texts), len(data_loader.dataset.image)), -100.0
+        (len(texts), len(data_loader.dataset.images)), -100.0
     ).to(device)
 
     step = sims_matrix.size(0) // num_tasks + 1
@@ -153,7 +175,6 @@ def search_with_simla(
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print("Evaluation time {}".format(total_time_str))
 
-    import ipdb; ipdb.set_trace()
     return score_matrix_t2i.cpu().numpy()
 
 def main(args, config):
@@ -165,7 +186,19 @@ def main(args, config):
 
     #### Dataset ####
     print("Creating retrieval dataset")
-    train_dataset, val_dataset, test_dataset = create_dataset("re", config)
+    test_transform = transforms.Compose(
+        [
+            transforms.Resize(
+                (config["image_res"], config["image_res"]), interpolation=Image.BICUBIC
+            ),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                    (0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)
+                )
+        ]
+    )
+
+    test_dataset = ImageFolderDataset('/net/acadia10a/data/zkhan/flickr30k/flickr30k-images/', transform=test_transform)
 
     test_loader = create_loader(test_dataset, config['batch_size_test'], 4, None)
 
@@ -212,14 +245,11 @@ def main(args, config):
     # if args.distributed:
     #     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
     #     model_without_ddp = model.module
-
+    search_query = "A child sitting at a restaurant table holding a paper mask against his face."
     score_matrix_t2i = search_with_simla(
-        model_without_ddp, test_loader, tokenizer, device, config
+        model_without_ddp, test_loader, tokenizer, device, config, search_query 
     )
-
-    # total_time = time.time() - start_time
-    # total_time_str = str(datetime.timedelta(seconds=int(total_time)))
-    # print("Time {}".format(total_time_str))
+    print(score_matrix_t2i.argmax())
 
 
 if __name__ == "__main__":
