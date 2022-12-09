@@ -138,22 +138,20 @@ def search_with_simla(
         score = model.itm_head(output.last_hidden_state[:, 0, :])[:, 1]
         score_matrix_t2i[start + i, topk_idx] = score
 
-    if args.distributed:
-        dist.barrier()
-        torch.distributed.all_reduce(
-            score_matrix_t2i, op=torch.distributed.ReduceOp.SUM
-        )
+    # if args.distributed:
+    #     dist.barrier()
+    #     torch.distributed.all_reduce(
+    #         score_matrix_t2i, op=torch.distributed.ReduceOp.SUM
+    #     )
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print("Evaluation time {}".format(total_time_str))
 
-    import ipdb; ipdb.set_trace()
-
     return score_matrix_t2i.cpu().numpy()
 
 def main(args, config):
-    utils.init_distributed_mode(args)
+    # utils.init_distributed_mode(args)
 
     device = torch.device(args.device)
 
@@ -227,11 +225,11 @@ def main(args, config):
     model = model.to(device)
 
     model_without_ddp = model
-    if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
-        model_without_ddp = model.module
+    # if args.distributed:
+    #     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+    #     model_without_ddp = model.module
 
-    _, _ = search_with_simla(
+    _ = search_with_simla(
         model_without_ddp, test_loader, tokenizer, device, config
     )
 
