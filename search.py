@@ -198,7 +198,8 @@ def main(args, config):
         ]
     )
 
-    test_dataset = ImageFolderDataset('/net/acadia10a/data/zkhan/flickr30k/flickr30k-images/', transform=test_transform)
+    # test_dataset = ImageFolderDataset('/net/acadia10a/data/zkhan/flickr30k/flickr30k-images/', transform=test_transform)
+    test_dataset = ImageFolderDataset(args.search_directory, transform=test_transform)
 
     test_loader = create_loader(test_dataset, config['batch_size_test'], 4, None)
 
@@ -245,15 +246,18 @@ def main(args, config):
     # if args.distributed:
     #     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
     #     model_without_ddp = model.module
-    search_query = "A child sitting at a restaurant table holding a paper mask against his face."
+    # search_query = "A child sitting at a restaurant table holding a paper mask against his face."
     score_matrix_t2i = search_with_simla(
-        model_without_ddp, test_loader, tokenizer, device, config, search_query 
+        model_without_ddp, test_loader, tokenizer, device, config, args.search_query 
     )
     print(score_matrix_t2i.argmax())
+    return score_matrix_t2i
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("search_query")
+    parser.add_argument("search_directory")
     parser.add_argument("--config", default="./configs/Search.yaml")
     parser.add_argument("--checkpoint", default="")
     parser.add_argument("--text_encoder", default="bert-base-uncased")
