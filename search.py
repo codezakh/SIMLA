@@ -30,6 +30,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms
 
+
 def create_loader(dataset, batch_size, num_workers, collate_fn):
     loader = DataLoader(
         dataset,
@@ -119,7 +120,7 @@ def search_with_simla(
         print("Cache not found. Computing image features...")
         image_feats = []
         image_embeds = []
-        for image, img_id in tqdm(data_loader):
+        for image in tqdm(data_loader):
             image = image.to(device)
             image_feat = model.visual_encoder(image)
             image_embed = model.vision_proj(image_feat[:, 0, :])
@@ -251,10 +252,12 @@ def main(args, config):
         model_without_ddp, test_loader, tokenizer, device, config, args.search_query 
     )
     print(score_matrix_t2i.argmax())
-    return score_matrix_t2i
+    return score_matrix_t2i, test_dataset
 
 
 if __name__ == "__main__":
+    from transformers import logging as transformers_logging
+    transformers_logging.set_verbosity_error()
     parser = argparse.ArgumentParser()
     parser.add_argument("search_query")
     parser.add_argument("search_directory")
